@@ -1,0 +1,147 @@
+name: temp
+model_type: MU_Diff_S1
+scale: 1
+num_gpu: auto
+manual_seed: 100
+
+datasets:
+  train:
+    name: TrainSet
+    type: VideoFrame_Dataset
+    dataroot: '/hdd/0/wj/GOPRO_Large_all_1920fps/train/'
+    sigma_range: 0
+    patch_sz: 256
+    tform_op: 'all'
+    frame_num: 8
+    stride: 1
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 1
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+    ### -------------Progressive training--------------------------
+    # mini_batch_sizes: [16,8,4,4,2,2]             # Batch size per gpu   
+    # iters: [20000,20000,20000,20000,20000,200000]
+    # gt_size: 384   # Max patch size for progressive training
+    # gt_sizes: [128,160,192,256,320,384]  # Patch sizes for progressive training.
+    ### ------------------------------------------------------------
+
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+
+ce_net:
+  sigma_range: [0, 0.1]
+  test_sigma_range: 0
+  ce_code_n: 8
+  frame_n: 8
+  ce_code_init: [1, 1, 1, 0, 0, 1, 0, 1]
+  opt_cecode: False
+  binary_fc: STEBinary_fc
+
+# network structures
+# network_g:
+#   type: Transformer
+#   inp_channels: 3
+#   out_channels: 3
+#   dim: 48
+#   num_blocks: [3,5,6,6]
+#   num_refinement_blocks: 4
+#   heads: [1,2,4,8]
+#   ffn_expansion_factor: 2.66
+#   bias: False
+#   LayerNorm_type: WithBias
+#   dual_pixel_task: False
+#   embed_dim: 32
+#   group: 8
+
+network_g:
+  type: PIDCD
+  width: 32
+  enc_blk_nums: [1, 1, 1, 28]
+  middle_blk_num: 1
+  dec_blk_nums: [1, 1, 1, 1]
+  bias: False
+  LayerNorm_type: WithBias
+  embed_dim: 32
+
+network_le:
+  type: BDNeRV_RC
+  n_colors: 3
+  n_resblock: 4
+  n_feats: 32
+  kernel_size: 3
+  padding: 1
+  group: 8
+  patch_expansion: 0.5
+  channel_expansion: 4
+
+path:
+  pretrain_network_g: ~
+  param_key_g: params
+  strict_load_g: true
+
+  pretrain_network_le: ~
+  param_key_g: params
+  strict_load_le: true
+
+  resume_state: ~
+
+  visualization: 
+
+# training settings
+train:
+  total_iter: 200000
+  warmup_iter: -1 # no warm up
+  use_grad_clip: True
+
+  scheduler:
+    type: CosineAnnealingLR
+    args:
+      T_max: 200000
+      eta_min: !!float 1e-6
+      
+
+  optim_total:
+    type: AdamW
+    lr: !!float 2e-4
+    weight_decay: !!float 1e-4
+    betas: [0.9, 0.999]
+
+  pixel_opt:
+   type: WeightedLoss
+   loss_conf_dict: {'MyCharbonnierLoss':1.0, 'SSIMLoss':0.05, 'EdgeLoss':0.05}
+
+  pixel_opt_reblur:
+    type: MyCharbonnierLoss
+    weight: 0.2
+
+# validation settings
+val:
+  val_freq: !!float 4e3
+  save_img: false
+
+  pbar: true
+
+  metrics: 
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+
+# logging settings
+logger:
+  print_freq: 1000
+  save_checkpoint_freq: !!float 4e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29501

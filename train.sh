@@ -1,0 +1,2 @@
+CUDA_VISIBLE_DEVICES=0,1,2 torchrun --nproc_per_node=3 --master_port=4321 train_mumu.py -opt options/train/GoPro_S1_MUMU.yml --launcher pytorch --auto_resume
+CUDA_VISIBLE_DEVICES=0,1,2 torchrun --nproc_per_node=3 --master_port=4321 train_mumu.py -opt options/train/GoPro_S2_MUMU.yml --launcher pytorch --auto_resume

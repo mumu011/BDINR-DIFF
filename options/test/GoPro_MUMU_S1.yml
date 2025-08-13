@@ -1,0 +1,172 @@
+# general settings
+name:  test_MU_Diff_w_nd
+model_type: MU_Diff_S1
+scale: 1
+num_gpu: auto  # set num_gpu: 0 for cpu mode
+manual_seed: 100
+
+# dataset and data loader settings
+datasets:
+  # test_1:  # the 1st test dataset
+  #   name: GoPro
+  #   type: VideoFrame_Dataset
+  #   dataroot: '/hdd/0/wj/GoPro_Large_all/test'
+  #   sigma_range: 0
+  #   patch_sz: ~
+  #   tform_op: ~
+  #   frame_num: 8
+  #   stride: 8
+
+  test_1:  # the 1st test dataset
+    name: REDS
+    type: VideoFrame_Dataset
+    dataroot: '/hdd/0/wj/WAIC_TSR_Dataset/ground_truth'
+    # dataroot: '/hdd/0/wj/REDS/val/val_orig/'
+    sigma_range: 0
+    patch_sz: ~
+    tform_op: ~
+    frame_num: 8
+    stride: 8
+
+  # test_1:  # the 1st test dataset
+  #   name: GoPro
+  #   type: PairedImageIRDataset
+  #   dataroot_gt: datasets/GoPro/test/target
+  #   dataroot_lq: datasets/GoPro/test/input
+  #   filename_tmpl: '{}'
+  #   io_backend:
+  #     type: disk
+
+  # test_2:  # the 2st test dataset
+  #   name: HIDE
+  #   type: PairedImageIRDataset
+  #   dataroot_gt: datasets/test/HIDE/target
+  #   dataroot_lq: datasets/test/HIDE/input
+  #   filename_tmpl: '{}'
+  #   io_backend:
+  #     type: disk
+
+  # test_3:  # the 3st test dataset
+  #   name: RealBlur_J
+  #   type: PairedImageIRDataset
+  #   dataroot_gt: datasets/test/RealBlur_J/target
+  #   dataroot_lq: datasets/test/RealBlur_J/input
+  #   filename_tmpl: '{}'
+  #   io_backend:
+  #     type: disk
+
+  # test_4:  # the 4st test dataset
+  #   name: RealBlur_R
+  #   type: PairedImageIRDataset
+  #   dataroot_gt: datasets/test/RealBlur_R/target
+  #   dataroot_lq: datasets/test/RealBlur_R/input
+  #   filename_tmpl: '{}'
+  #   io_backend:
+  #     type: disk
+
+    # data loader
+    use_shuffle: false
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 1
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+ce_net:
+  sigma_range: 0
+  test_sigma_range: 0
+  ce_code_n: 8
+  frame_n: 8
+  ce_code_init: [1, 1, 1, 0, 0, 1, 0, 1]
+  opt_cecode: False
+  binary_fc: STEBinary_fc
+
+# network structures
+network_g:
+  type: PIDCD
+  width: 32
+  enc_blk_nums: [1, 1, 1, 28]
+  middle_blk_num: 1
+  dec_blk_nums: [1, 1, 1, 1]
+  bias: False
+  LayerNorm_type: WithBias
+  embed_dim: 32
+
+network_le:
+  type: BDNeRV_RC
+  n_colors: 3
+  n_resblock: 4
+  n_feats: 32
+  kernel_size: 3
+  padding: 1
+  group: 8
+  patch_expansion: 0.5
+  channel_expansion: 4
+
+network_le_dm:
+  type: BDNeRV_RC
+  n_colors: 3
+  n_resblock: 4
+  n_feats: 32
+  kernel_size: 3
+  padding: 1
+  group: 8
+  patch_expansion: 0.5
+  channel_expansion: 4
+
+# network_d:
+#   type: denoising
+#   in_channel: 128 # (embed_dim*4)
+#   out_channel: 128 # (embed_dim*4)
+#   inner_channel: 256
+#   block_num: 4
+#   group: 8 # same as above
+#   patch_expansion: 0.5
+#   channel_expansion: 2
+
+# diffusion_schedule:
+#   apply_ldm: False
+#   schedule: linear
+#   timesteps: 8
+#   linear_start: 0.1 # 1e-6
+#   linear_end: 0.99 # 1e-2
+
+# path
+path:
+  pretrain_network_g: /hdd/0/wj/HI-Diff/experiments/GoPro_S1_MU_300k_nd/models/net_g_292000.pth
+  param_key_g: params
+  strict_load_g: true
+
+  pretrain_network_le: /hdd/0/wj/HI-Diff/experiments/GoPro_S1_MU_300k_nd/models/net_le_292000.pth
+  param_key_g: params
+  strict_load_le: true
+
+  # pretrain_network_d: /hdd/0/wj/HI-Diff/experiments/GoPro_S2_MU_200k/models/net_d_180000.pth
+  # param_key_g: params
+  # strict_load_d: true
+
+  resume_state: ~
+    
+# validation settings
+val:
+  save_img: True
+  suffix: ''
+  selfensemble_testing: False
+
+  pbar: true
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+    lpip: # 计算lpips指标
+      type: calculate_lpips
+      crop_border: 0
+      test_y_channel: false
